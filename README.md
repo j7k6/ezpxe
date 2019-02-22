@@ -1,15 +1,18 @@
 # Portable Network Boot Environment
+
 **ezPXE** basically is an *Ansible* playbook which configures a local Vagrant VM or a Linux server in a home or corporate network with a `dnsmasq` DHCP proxy providing a `pxelinux` network boot environment, bootable from any PXE capable system.
 
 Ever needed to do a quick installation of Windows 10 or Ubuntu but didn't want to go through the annoying process of creating a bootable USB drive? **ezPXE** provides a fully functional network boot environment with minimal configuration effort for exactly that use case!
-Just have the Vagrant environment and some operation system ISO laying on your local laptop disk and run `vagrant up` to get started.
+Just have the Vagrant environment and some operation system ISO laying on your local laptop disk ready and run `vagrant up` to get started.
 
-### Requirements
+
+## Requirements
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
-- (optional) [VirtualBox](https://www.virtualbox.org/wiki/Downloads) + Oracle VM VirtualBox Extension Pack
-- (optional) [Vagrant](https://www.vagrantup.com/downloads.html) + `vagrant-persistant-storage` plugin
+- [VirtualBox](https://www.virtualbox.org/wiki/Downloads) + Oracle VM VirtualBox Extension Pack
+- [Vagrant](https://www.vagrantup.com/downloads.html) + `vagrant-persistant-storage` plugin
 
-### Quick Start
+
+## Quick Start
 To set up a local environment with *Vagrant* follow those steps:
 1. Fill up the `images/` folder with the desired ISO files.
 2. Create a copy of `boot.yml.example`:
@@ -22,7 +25,8 @@ To set up a local environment with *Vagrant* follow those steps:
 
 **Hint**: The first run of the Ansible playbook will take some time, because all the ISO files are being transfered into the VM and extracted. The VM's data disk is persistent and will survive `vagrant destroy` without loosing any data on in.
 
-### `boot.yml`
+
+## Configuration
 To provide a network boot environment, a new item needs to be created in `boot.yml` (for real world examples see `boot.yml.example`).
 
 - **name**: a unique identifier (`[a-zA-Z0-9_]`) for each item.
@@ -37,8 +41,10 @@ To provide a network boot environment, a new item needs to be created in `boot.y
 
 When adding new boot environments into an already running **ezPXE** setup, just run `vagrant provision` and everything will be updated inside the environment.
 
-### Windows Installation
+
+## Windows Installation
 When booting into a Windows installation media, wait until the setup screen appears and press `Shift+F10`. Enter `startnet.cmd` into the command line window to start the installation from the automatically provided network share. From there on it's like installing Windows from an USB drive.
 
-### Limitations
+
+## Limitations
 At the moment **ezPXE** is only usable for Legacy BIOS, UEFI support will follow.
