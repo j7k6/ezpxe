@@ -1,0 +1,4 @@
+LABEL {{item.item.name}}
+  MENU LABEL {{item.item.title}}
+  LINUX http://{{ip_address}}/memdisk
+  APPEND iso initrd=http://{{ip_address}}/{{item.item.src}} raw

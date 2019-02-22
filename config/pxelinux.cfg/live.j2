@@ -1,0 +1,4 @@
+LABEL {{item.item.name}}
+  MENU LABEL {{item.item.title}}
+  KERNEL http://{{ip_address}}/install/{{item.item.name}}/live/vmlinuz
+  APPEND initrd=http://{{ip_address}}/install/{{item.item.name}}/live/initrd.img boot=live nfsroot={{ip_address}}:/var/lib/tftpboot/install/{{item.item.name}} netboot=nfs username=root hostname={{item.item.name}} components ro --

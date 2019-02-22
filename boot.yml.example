@@ -1,0 +1,27 @@
+---
+
+boot:
+- name: "netboot_xyz"
+  title: "netboot.xyz"
+  src: "http://boot.netboot.xyz/ipxe/netboot.xyz.iso"
+  template: "netboot"
+
+- name: "esxi650"
+  title: "VMware ESXi 6.5.0 U1"
+  src: "VMware-VMvisor-Installer-6.5.0.update01-5969303.x86_64.iso"
+  template: "iso"
+
+- name: "kali"
+  title: "Kali Linux 2019.1 (Live)"
+  src: "kali-linux-2018.4-amd64.iso"
+  template: "live"
+
+- name: "ubuntu"
+  title: "Ubuntu Desktop 18.04 (Live)"
+  src: "ubuntu-18.04.2-desktop-amd64.iso"
+  template: "casper"
+
+- name: "win10"
+  title: "Windows 10"
+  src: "Win10_1709_English_x64.iso"
+  template: "windows"

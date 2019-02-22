@@ -1,0 +1,9 @@
+.DS_Store
+.vagrant/
+*.retry
+*.log
+*.swp
+*.tmp
+*.vdi
+*.iso
+boot.yml

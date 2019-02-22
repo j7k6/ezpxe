@@ -1,0 +1,4 @@
+LABEL {{item.item.name}}
+  MENU LABEL {{item.item.title}}
+  COM32 linux.c32
+  APPEND http://{{ip_address}}/wimboot initrdfile=http://{{ip_address}}/install/{{item.item.name}}/startnet.cmd,http://{{ip_address}}/install/{{item.item.name}}/boot/bcd,http://{{ip_address}}/install/{{item.item.name}}/boot/boot.sdi,http://{{ip_address}}/install/{{item.item.name}}/sources/boot.wim

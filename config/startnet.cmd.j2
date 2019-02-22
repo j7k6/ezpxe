@@ -1,0 +1,5 @@
+@echo off
+wpeinit
+ping 127.0.0.1 -n 10 > nul
+net use z: \\{{ip_address}}\install /user:user password
+z:\{{item.item.name}}\sources\setup.exe

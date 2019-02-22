@@ -1,0 +1,4 @@
+LABEL {{item.item.name}}
+  MENU LABEL {{item.item.title}}
+  KERNEL http://{{ip_address}}/install/{{item.item.name}}/casper/vmlinuz
+  APPEND initrd=http://{{ip_address}}/install/{{item.item.name}}/casper/initrd root=/dev/nfs boot=casper nfsroot={{ip_address}}:/var/lib/tftpboot/install/{{item.item.name}} netboot=nfs console-setup/layoutcode=de ip=dhcp systemd.mask=tmp.mount ro --

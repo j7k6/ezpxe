@@ -1,0 +1,189 @@
+---
+
+- hosts: all
+  become: true
+  vars_files:
+    - boot.yml
+
+  tasks:
+  - name: "Get network interface name"
+    set_fact:
+      if_name: "{{ ansible_interfaces | difference(['lo',ansible_default_ipv4.alias]) | first }}"
+
+  - name: "Get network configuration"
+    set_fact:
+      ip_address: "{{ hostvars[inventory_hostname]['ansible_'+if_name]['ipv4']['address'] }}"
+      network: "{{ hostvars[inventory_hostname]['ansible_'+if_name]['ipv4']['network'] }}"
+      netmask: "{{ hostvars[inventory_hostname]['ansible_'+if_name]['ipv4']['netmask'] }}"
+
+  - name: "Install packages"
+    apt:
+      name: "{{packages}}"
+      state: present
+      update_cache: yes
+    vars:
+      packages:
+      - vim
+      - rsync
+      - samba
+      - dnsmasq
+      - pxelinux 
+      - memtest86+
+      - nfs-kernel-server
+      - nginx
+
+  - name: "Create directories"
+    file:
+      path: "{{item}}"
+      state: directory
+    with_items:
+      - "/var/lib/tftpboot/pxelinux.cfg"
+      - "/var/lib/tftpboot/install"
+      - "/var/lib/tftpboot/images"
+
+  - name: "Add config files"
+    template:
+      src: "{{item.src}}"
+      dest: "{{item.dst}}"
+      force: yes
+    with_items:
+      - { src: "config/smb.conf", dst: "/etc/samba/smb.conf" }
+      - { src: "config/dnsmasq.conf.j2", dst: "/etc/dnsmasq.conf" }
+      - { src: "config/nginx_default.conf", dst: "/etc/nginx/sites-available/default" }
+      - { src: "config/pxelinux.cfg/default", dst: "/var/lib/tftpboot/pxelinux.cfg/default" }
+
+  - name: "Symlink files"
+    file:
+      src: "{{item.src}}"
+      dest: "{{item.dst}}"
+      state: link
+      force: yes
+    with_items:
+      - { src: "/usr/lib/PXELINUX/lpxelinux.0", dst: "/var/lib/tftpboot/lpxelinux.0" }
+      - { src: "/usr/lib/syslinux/modules/bios/ldlinux.c32", dst: "/var/lib/tftpboot/ldlinux.c32" }
+      - { src: "/usr/lib/syslinux/modules/bios/menu.c32", dst: "/var/lib/tftpboot/menu.c32" }
+      - { src: "/usr/lib/syslinux/modules/bios/libcom32.c32", dst: "/var/lib/tftpboot/libcom32.c32" }
+      - { src: "/usr/lib/syslinux/modules/bios/libutil.c32", dst: "/var/lib/tftpboot/libutil.c32" }
+      - { src: "/usr/lib/syslinux/modules/bios/linux.c32", dst: "/var/lib/tftpboot/linux.c32" }
+      - { src: "/usr/lib/syslinux/memdisk", dst: "/var/lib/tftpboot/memdisk" }
+      - { src: "/boot/memtest86+.bin", dst: "/var/lib/tftpboot/memtest86+" }
+
+  - name: "Download wimboot"
+    unarchive: 
+      src: "https://git.ipxe.org/releases/wimboot/wimboot-2.6.0.tar.gz"
+      dest: "/var/lib/tftpboot/"
+      remote_src: yes
+      extra_opts:
+        - "--strip-components=1"
+        - "wimboot-2.6.0/wimboot"
+
+  - name: "Copy ISOs"
+    synchronize:
+      src: "images/{{item.src}}"
+      dest: "/var/lib/tftpboot/images/{{item.src}}"
+    with_items:
+      - "{{boot}}"
+    ignore_errors: True
+    when: item.template != "netboot"
+
+  - name: "Check if ISOs exist"
+    stat:
+      path: "/var/lib/tftpboot/images/{{item.src}}"
+      get_checksum: False
+      get_md5: False
+    with_items:
+      - "{{boot}}"
+    register: boot_src
+
+  - name: "Create ISO mountpoints"
+    file:
+      path: "/mnt/{{item.item.name}}"
+      state: directory
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True and (item.item.template == "casper" or item.item.template == "live" or item.item.template == "windows")
+
+  - name: "Create ISO targets"
+    file:
+      path: "/var/lib/tftpboot/install/{{item.item.name}}"
+      state: directory
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True and (item.item.template == "casper" or item.item.template == "live" or item.item.template == "windows")
+
+  - name: "Mount ISOs"
+    mount:
+      src: "/var/lib/tftpboot/images/{{item.item.src}}"
+      path: "/mnt/{{item.item.name}}"
+      fstype: "auto"
+      state: mounted
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True and (item.item.template == "casper" or item.item.template == "live" or item.item.template == "windows")
+    ignore_errors: True
+
+  - name: "Extract ISOs"
+    shell: "rsync -a --delete /mnt/{{item.item.name}}/. /var/lib/tftpboot/install/{{item.item.name}}/"
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True and (item.item.template == "casper" or item.item.template == "live" or item.item.template == "windows")
+
+  - name: "Unmount ISOs"
+    mount:
+      src: "/var/lib/tftpboot/images/{{item.item.src}}"
+      path: "/mnt/{{item.item.name}}"
+      fstype: "auto"
+      state: unmounted
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True and (item.item.template == "casper" or item.item.template == "live" or item.item.template == "windows")
+    ignore_errors: True
+
+  - name: "Add pxelinux templates"
+    template:
+      src: "config/pxelinux.cfg/{{item.item.template}}.j2"
+      dest: "/var/lib/tftpboot/pxelinux.cfg/{{item.item.name}}"
+      force: yes
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True or item.item.template == "netboot"
+
+  - name: "Add templates to pxelinux.cfg/default"
+    lineinfile:
+      path: "/var/lib/tftpboot/pxelinux.cfg/default"
+      line: "INCLUDE pxelinux.cfg/{{item.item.name}}"
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True or item.item.template == "netboot"
+
+  - name: "Add startnet.cmd to Windows install files"
+    template:
+      src: "config/startnet.cmd.j2"
+      dest: "/var/lib/tftpboot/install/{{item.item.name}}/startnet.cmd"
+      force: yes
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True and item.item.template == "windows"
+
+  - name: "Export NFS shares"
+    lineinfile:
+      path: "/etc/exports"
+      line: "/var/lib/tftpboot/install/{{item.item.name}} {{network}}/{{netmask}}(ro,sync,no_subtree_check,no_root_squash)"
+    with_items:
+      - "{{boot_src.results}}"
+    when: item.stat.exists == True and (item.item.template == "casper" or item.item.template == "live")
+
+  - name: "Restart services"
+    service:
+      name: "{{item}}"
+      state: restarted
+      enabled: yes
+    with_items:
+      - smbd
+      - dnsmasq
+      - nginx
+      - nfs-kernel-server
+
+  - name: "Print Network Configuration"
+    debug:
+      msg: "Interface: {{if_name}} | IP: {{ip_address}} | Netmask: {{netmask}}"
